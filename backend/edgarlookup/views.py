@@ -5,7 +5,7 @@ import re
 
 import json
 
-def get_companies(request):
+def get_companies(request, search_string):
     headers = {'User-Agent': 'MB (mariabydanova@gmail.com)'}
     cikSourceData = requests.get("https://www.sec.gov/Archives/edgar/cik-lookup-data.txt", headers=headers)
     fileData = cikSourceData.content.decode('iso-8859-1')
@@ -18,7 +18,8 @@ def get_companies(request):
             name = match.group(1)
             cik = match.group(2)
             obj = {'org_name': name, 'org_cik': cik}
-            result.append(obj)
+            if search_string.lower() in name.lower():
+                result.append(obj)
     json_data = json.dumps(result)
     return HttpResponse(json_data, content_type='application/json')
 

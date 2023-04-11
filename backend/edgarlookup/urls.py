@@ -21,5 +21,5 @@ from .views import get_cik_possibilities, get_companies
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('get_cik_possibilities/<str:my_string>/', get_cik_possibilities, name='get_cik_possibilities'),
-    path('get_companies/', get_companies, name='get_companies')
+    path('get_companies/<str:search_string>/', get_companies, name='get_companies')
 ]

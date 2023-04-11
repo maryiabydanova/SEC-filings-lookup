@@ -8,10 +8,12 @@
 import { loadFonts } from './webfontloader'
 import vuetify from './vuetify'
 import router from '../router'
+import axiosPlugin from './axios'
 
 export function registerPlugins (app) {
   loadFonts()
   app
     .use(vuetify)
     .use(router)
+    .use(axiosPlugin)
 }

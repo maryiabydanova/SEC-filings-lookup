@@ -9,71 +9,63 @@
 
       <div class="text-body-2 font-weight-light mb-n1">Welcome to</div>
 
-      <h1 class="text-h2 font-weight-bold">Vuetify</h1>
+      <h1 class="text-h2 font-weight-bold">Edgar Data</h1>
 
       <div class="py-14" />
 
       <v-row class="d-flex align-center justify-center">
-        <v-col cols="auto">
-          <v-btn
-            href="https://next.vuetifyjs.com/components/all/"
-            min-width="164"
-            rel="noopener noreferrer"
-            target="_blank"
-            variant="text"
-          >
-            <v-icon
-              icon="mdi-view-dashboard"
-              size="large"
-              start
-            />
-
-            Components
-          </v-btn>
-        </v-col>
-
-        <v-col cols="auto">
-          <v-btn
-            color="primary"
-            href="https://next.vuetifyjs.com/introduction/why-vuetify/#feature-guides"
-            min-width="228"
-            rel="noopener noreferrer"
-            size="x-large"
-            target="_blank"
-            variant="flat"
-          >
-            <v-icon
-              icon="mdi-speedometer"
-              size="large"
-              start
-            />
-
-            Get Started
-          </v-btn>
-        </v-col>
-
-        <v-col cols="auto">
-          <v-btn
-            href="https://community.vuetifyjs.com/"
-            min-width="164"
-            rel="noopener noreferrer"
-            target="_blank"
-            variant="text"
-          >
-            <v-icon
-              icon="mdi-account-group"
-              size="large"
-              start
-            />
-
-            Community
-          </v-btn>
-        </v-col>
+        <v-combobox
+          v-model="selectedItem"
+          item-value="org_cik"
+          item-title="org_name"
+          :items="items"
+          :loading="loading"
+          :label="label"
+          :hint="hint"
+          :rules="rules"
+          :menu-props="{ maxHeight: 300 }"
+          @input="onInput"
+          @change="onChange"
+        ></v-combobox>
       </v-row>
     </v-responsive>
   </v-container>
 </template>
 
-<script setup>
-  //
+<script>
+  export default {
+  data() {
+    return {
+      selectedItem: null,
+      items: [],
+      loading: false,
+      label: 'Select an item',
+      hint: 'Start typing to search',
+      rules: [v => !!v || 'Item is required']
+    }
+  },
+  methods: {
+    fetchItems() {
+      this.loading = true
+      this.$axios.get(`get_companies/${this.selectedItem}/`)
+        .then(response => {
+          this.items = response.data
+          this.loading = false
+        })
+        .catch(error => {
+          console.error(error)
+          this.loading = false
+        })
+    },
+    onInput() {
+      console.log('inp', this.selectedItem)
+      if(this.selectedItem.length > 3 && !this.loading)  {
+        this.fetchItems()
+      }
+    },
+    onChange() {
+      console.log('Selected item:', this.selectedItem)
+    },
+  }
+}
 </script>
