@@ -1,35 +1,21 @@
-# compiled output
-/dist
-/node_modules
-
-# Logs
-logs
+# Django-related files
 *.log
-npm-debug.log*
-pnpm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-lerna-debug.log*
+*.pot
+*.pyc
+__pycache__/
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
 
-# OS
-.DS_Store
+# Static files
+/staticfiles/
+/media/
 
-# Tests
-/coverage
-/.nyc_output
+# Virtual environment
+py-env/
+ENV/
 
-# IDEs and editors
-/.idea
-.project
-.classpath
-.c9/
-*.launch
-.settings/
-*.sublime-workspace
-
-# IDE - VSCode
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
+# Other project-related files
+*.pyc
+*.pyo
+*.DS_Store
