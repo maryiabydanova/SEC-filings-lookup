@@ -1,17 +1,27 @@
 from django.http import HttpResponse
+from django.core.cache import cache
 from secedgar.cik_lookup import CIKLookup
 import requests
 import re
-
 import json
 
+def _get_companies_map():
+    data = cache.get('companies_map')
+    if data is not None:
+        print('got cache')
+        return data
+    else:
+        headers = {'User-Agent': 'MB (mariabydanova@gmail.com)'}
+        cikSourceData = requests.get("https://www.sec.gov/Archives/edgar/cik-lookup-data.txt", headers=headers)
+        fileData = cikSourceData.content.decode('iso-8859-1')
+        lines = fileData.splitlines()
+        cache.set('companies_map', lines, timeout=3600)  # add data to cache with expiration time of 1 hour
+        return lines
+
 def get_companies(request, search_string):
-    headers = {'User-Agent': 'MB (mariabydanova@gmail.com)'}
-    cikSourceData = requests.get("https://www.sec.gov/Archives/edgar/cik-lookup-data.txt", headers=headers)
-    fileData = cikSourceData.content.decode('iso-8859-1')
-    result = []
+    lines = _get_companies_map()
     linePattern = r'^(.*?):(\d+):'
-    lines = fileData.splitlines()
+    result=[]
     for line in lines:
         match = re.match(linePattern, line)
         if match:
@@ -20,6 +30,7 @@ def get_companies(request, search_string):
             obj = {'org_name': name, 'org_cik': cik}
             if search_string.lower() in name.lower():
                 result.append(obj)
+
     json_data = json.dumps(result)
     return HttpResponse(json_data, content_type='application/json')
 
