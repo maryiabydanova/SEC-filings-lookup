@@ -1,6 +1,8 @@
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.core.cache import cache
 from secedgar.cik_lookup import CIKLookup
+from secedgar import filings, FilingType
+from django.views.decorators.csrf import csrf_exempt
 import requests
 import re
 import json
@@ -46,3 +48,22 @@ def get_cik_possibilities(request, my_string):
         result = cik_lookup.ciks
 
     return HttpResponse(result)
+
+@csrf_exempt
+def get_company_filings(request):
+    urls = []
+    try:
+        data = json.loads(request.body)
+        cik = data['cik']
+        cik_filings = filings(
+            cik_lookup=cik,
+            filing_type=FilingType.FILING_10K,
+            user_agent="MB (mariabydanova@gmail.com)"
+        )
+
+        urls = cik_filings.get_urls_safely()[cik]
+        urls = list(set(urls))
+    except json.JSONDecodeError as e:
+        return HttpResponse({'error': 'Invalid JSON: ' + str(e)})
+    
+    return JsonResponse({'file_urls': urls})

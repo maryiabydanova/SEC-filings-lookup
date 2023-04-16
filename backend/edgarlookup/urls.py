@@ -16,10 +16,11 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from .views import get_cik_possibilities, get_companies
+from .views import get_cik_possibilities, get_companies, get_company_filings
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('get_cik_possibilities/<str:my_string>/', get_cik_possibilities, name='get_cik_possibilities'),
     path('get_companies/<str:search_string>/', get_companies, name='get_companies'),
+    path('get_company_filings/', get_company_filings, name='get_company_filings'),
 ]
