@@ -1,69 +1,85 @@
 from django.http import HttpResponse, JsonResponse
 from django.core.cache import cache
-from secedgar.cik_lookup import CIKLookup
-from secedgar import filings, FilingType
 from django.views.decorators.csrf import csrf_exempt
-import requests
-import re
-import json
+from secedgar.cik_lookup import CIKLookup
+from secedgar.utils import make_path
+from secedgar.client import NetworkClient
+from secedgar.parser import MetaParser
+from secedgar import filings, FilingType
+import aiohttp,asyncio,requests,re,json,ssl,os
 
-def _get_companies_map():
-    data = cache.get('companies_map')
-    if data is not None:
-        print('got cache')
-        return data
-    else:
-        headers = {'User-Agent': 'MB (mariabydanova@gmail.com)'}
-        cikSourceData = requests.get("https://www.sec.gov/Archives/edgar/cik-lookup-data.txt", headers=headers)
-        fileData = cikSourceData.content.decode('iso-8859-1')
-        lines = fileData.splitlines()
-        cache.set('companies_map', lines, timeout=3600)  # add data to cache with expiration time of 1 hour
-        return lines
+#don't do this in prod :(
+ssl_context = ssl.create_default_context()
+ssl_context.check_hostname = False
+ssl_context.verify_mode = ssl.CERT_NONE
+
+user_agent = 'MB (mariabydanova@gmail.com)'
+headers = {
+    "User-Agent": user_agent
+}
 
 def get_companies(request, search_string):
-    lines = _get_companies_map()
-    linePattern = r'^(.*?):(\d+):'
-    result=[]
-    for line in lines:
-        match = re.match(linePattern, line)
+    company_list = _get_companies_list()
+    line_pattern = r'^(.*?):(\d+):'
+    parsed_company_list=[]
+    for company in company_list:
+        match = re.match(line_pattern, company)
         if match:
             name = match.group(1)
             cik = match.group(2)
             obj = {'org_name': name, 'org_cik': cik}
             if search_string.lower() in name.lower():
-                result.append(obj)
+                parsed_company_list.append(obj)
+    return JsonResponse({'data': parsed_company_list})
 
-    json_data = json.dumps(result)
-    return HttpResponse(json_data, content_type='application/json')
-
-def get_cik_possibilities(request, my_string):
-    initial_cik_lookup = CIKLookup(lookups=[my_string], user_agent="MB (mariabydanova@gmail.com)")
-    print('v', initial_cik_lookup.get_cik_map())
-    if len(initial_cik_lookup.ciks) > 0 : 
-        lookup = initial_cik_lookup.lookups[0]
-        soup = initial_cik_lookup._get_lookup_soup(lookup)
-        cik_possibilities = initial_cik_lookup._get_cik_possibilities(soup)
-        result = ','.join(cik_possibilities)
+def _get_companies_list():
+    data = cache.get('companies_map')
+    if data is not None: #check if redis has the data cached
+        return data
     else:
-        result = cik_lookup.ciks
-
-    return HttpResponse(result)
+        cik_source_data = requests.get("https://www.sec.gov/Archives/edgar/cik-lookup-data.txt", headers=headers)
+        cik_decoded_file_data = cik_source_data.content.decode('iso-8859-1')
+        file_lines = cik_decoded_file_data.splitlines() #each line represents a company
+        cache.set('companies_map', file_lines, timeout=3600)  # add data to cache with expiration time of 1 hour
+        return file_lines
 
 @csrf_exempt
 def get_company_filings(request):
     urls = []
     try:
-        data = json.loads(request.body)
-        cik = data['cik']
+        cik = json.loads(request.body)['cik']
         cik_filings = filings(
             cik_lookup=cik,
             filing_type=FilingType.FILING_10K,
             user_agent="MB (mariabydanova@gmail.com)"
         )
-
         urls = cik_filings.get_urls_safely()[cik]
         urls = list(set(urls))
     except json.JSONDecodeError as e:
         return HttpResponse({'error': 'Invalid JSON: ' + str(e)})
     
-    return JsonResponse({'file_urls': urls})
+    return JsonResponse({'data': urls})
+
+@csrf_exempt
+def get_filing_data(request):
+    body = json.loads(request.body)
+    file_url = body['url']
+    file_key = body['keyVal']
+    download_file(file_url, file_key)
+    parsed_file = MetaParser().process(os.path.join('./files/', file_key +'.txt'), './parsedFiles/' + file_key)
+
+def download_file(url, key):
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(_download_file(url, key))
+
+async def _download_file(url, key):
+    conn = aiohttp.TCPConnector(ssl=ssl_context)
+    clien_session = aiohttp.ClientSession(connector=conn, headers=headers,raise_for_status=True)
+    client = NetworkClient(user_agent=user_agent)
+    response = await client.fetch(url, clien_session)
+    with open('./files/' + key + '.txt', "wb") as f:
+        f.write(response)
+
+    await clien_session.close()
+    await conn.close()

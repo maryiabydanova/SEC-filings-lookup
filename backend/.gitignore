@@ -10,6 +10,8 @@ db.sqlite3-journal
 # Static files
 /staticfiles/
 /media/
+files/
+parsedFiles/
 
 # Virtual environment
 py-env/

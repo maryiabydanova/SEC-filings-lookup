@@ -31,11 +31,26 @@
           size="large"
           @click="handleClick"
         >
-          Get Docs
+          Get Data
         </v-btn>
       </v-row>
-      <v-row v-show="edgarFiles.length > 0">
-        <p v-for="fileUrl in edgarFiles"> {{ fileUrl }}</p>
+      <v-row class="mt-8"  v-show="edgarFiles.length > 0">
+        <v-tabs
+          v-model="tab"
+          bg-color="primary"
+        >
+          <v-tab v-for="(file, index) in edgarFiles" :key="index" :value="index">
+            {{ showFullYear(file.year) }}
+          </v-tab>
+        </v-tabs>
+
+        <v-card-text>
+          <v-window v-model="tab">
+            <v-window-item v-for="(file, index) in edgarFiles" :key="index" :value="index">
+            {{ file.url }}
+            </v-window-item>  
+          </v-window>    
+        </v-card-text>
       </v-row>
     </v-responsive>
   </v-container>
@@ -51,7 +66,8 @@
       loading: false,
       label: 'Select an item',
       hint: 'Start typing to search',
-      rules: [v => !!v || 'Item is required']
+      rules: [v => !!v || 'Item is required'],
+      tab: 0,
     }
   },
   methods: {
@@ -79,7 +95,48 @@
     handleClick() {
       this.$axios.post(`get_company_filings/`, { cik: this.selectedItem.org_cik, docType: 1})
         .then(response => {
-          this.edgarFiles = response.data.file_urls
+          this.edgarFiles = this.buildLinks(response.data)
+          this.preloadFirstTab()
+        })
+        .catch(error => {
+          console.error(error)
+        })
+    },
+    buildLinks(links) {
+      const regex = /\/(\d+)\/(\d+)-(\d+)-(\d+)\.txt$/;
+      return links.map((l) => {
+        const match = l.match(regex);
+        let linkText = '';
+        let cik = ''
+        let reportYear;
+        if (match) {
+          cik = match[2];
+          reportYear = match[3];
+          linkText = `${cik} - year: ${reportYear}`;
+
+        }
+        return {
+          text: linkText,
+          url: l,
+          year: reportYear,
+          key: `${cik}-${reportYear}`
+        }
+  
+      }).sort((l1, l2) => l2.year - l1.year )
+    },
+    showFullYear(year) {
+      const currentYear = new Date().getFullYear() % 100;
+      if(year > currentYear) {
+        return `19${year}`
+      } 
+      return `20${year}`
+    },
+    preloadFirstTab() {
+      let firstTab = this.edgarFiles[0];
+      let body = { 'url': firstTab.url, 'keyVal': firstTab.key }
+      this.$axios.post(`get_filing_data/`, body)
+        .then(response => {
+          console.log(response)
         })
         .catch(error => {
           console.error(error)
