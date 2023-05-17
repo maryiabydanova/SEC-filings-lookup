@@ -95,8 +95,12 @@
     handleClick() {
       this.$axios.post(`get_company_filings/`, { cik: this.selectedItem.org_cik, docType: 1})
         .then(response => {
-          this.edgarFiles = this.buildLinks(response.data)
-          this.preloadFirstTab()
+          if(response.message) {
+            this.$store.dispatch('addAlert', {message: response.message, id: Math.random()})
+          } else {
+            this.edgarFiles = this.buildLinks(response.data)
+            this.preloadFirstTab()
+          }
         })
         .catch(error => {
           console.error(error)
