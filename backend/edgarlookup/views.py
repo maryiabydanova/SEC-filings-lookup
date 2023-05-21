@@ -1,4 +1,4 @@
-from django.http import HttpResponse, JsonResponse
+from django.http import JsonResponse
 from django.core.cache import cache
 from django.views.decorators.csrf import csrf_exempt
 from secedgar.cik_lookup import CIKLookup
@@ -6,6 +6,7 @@ from secedgar.utils import make_path
 from secedgar.client import NetworkClient
 from secedgar.parser import MetaParser
 from secedgar import filings, FilingType
+from secedgar.exceptions import NoFilingsError
 import aiohttp,asyncio,requests,re,json,ssl,os
 
 #don't do this in prod :(
@@ -51,13 +52,12 @@ def get_company_filings(request):
         cik_filings = filings(
             cik_lookup=cik,
             filing_type=FilingType.FILING_10K,
-            user_agent="MB (mariabydanova@gmail.com)"
+            user_agent=user_agent
         )
         urls = cik_filings.get_urls_safely()[cik]
         urls = list(set(urls))
-    except json.JSONDecodeError as e:
-        return HttpResponse({'error': 'Invalid JSON: ' + str(e)})
-    
+    except NoFilingsError as e:
+        return JsonResponse({'message': 'No Filings found for this organization'})
     return JsonResponse({'data': urls})
 
 @csrf_exempt
@@ -66,7 +66,13 @@ def get_filing_data(request):
     file_url = body['url']
     file_key = body['keyVal']
     download_file(file_url, file_key)
-    parsed_file = MetaParser().process(os.path.join('./files/', file_key +'.txt'), './parsedFiles/' + file_key)
+    targetLocation = './parsedFiles/'
+    MetaParser().process(os.path.join('./files/', file_key +'.txt'), targetLocation)
+
+    with open(targetLocation + '/' + file_key + '/0.metadata.json') as json_file:
+        json_data = json.load(json_file)
+        return JsonResponse({'data': json_data})
+    
 
 def download_file(url, key):
     loop = asyncio.new_event_loop()
