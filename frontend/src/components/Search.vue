@@ -13,7 +13,7 @@
           v-model="selectedItem"
           item-value="org_cik"
           item-title="org_name"
-          :items="items"
+          :items="companies"
           :loading="loading"
           :label="label"
           :hint="hint"
@@ -38,7 +38,6 @@
     data() {
       return {
         selectedItem: null,
-        items: [],
         loading: false,
         label: 'Select an item',
         hint: 'Start typing to search',
@@ -46,7 +45,7 @@
       }
     },
     computed: {
-      items() {
+      companies() {
         return this.$store.state.companies
       },
       isCompanySelected() {

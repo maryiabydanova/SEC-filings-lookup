@@ -51,7 +51,6 @@ def get_company_filings(request):
         cik = json.loads(request.body)['cik']
         cik_filings = filings(
             cik_lookup=cik,
-            filing_type=FilingType.FILING_10K,
             user_agent=user_agent
         )
         urls = cik_filings.get_urls_safely()[cik]

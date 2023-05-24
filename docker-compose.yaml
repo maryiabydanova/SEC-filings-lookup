@@ -15,8 +15,6 @@ services:
       dockerfile: Dockerfile-frontend
     ports:
       - 3000:3000
-    expose: 
-      - "3000"
 
   redis:
     image: redis:latest
