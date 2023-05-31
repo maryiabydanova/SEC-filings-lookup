@@ -5,7 +5,9 @@ export default createStore({
     state: {
         alerts: [],
         companyFilings: [],
-        companies: []
+        companies: [],
+        companyMetadata: null,
+        companyFilingTypes: []
     },
     mutations: {
         ADD_ALERT(state, alert) {
@@ -19,6 +21,7 @@ export default createStore({
         SET_COMPANY_FILINGS(state, filings) {
           const regex = /\/(\d+)\/(\d+)-(\d+)-(\d+)\.txt$/;
           state.companyFilings = filings.map((l) => {
+            console.log('filing', l)
             const match = l.match(regex);
             let linkText = '';
             let cik = ''
@@ -40,6 +43,9 @@ export default createStore({
         },
         SET_COMPANIES(state, searchResult) {
           state.companies = searchResult;
+        },
+        SET_COMPANY_METADATA(state, selectedCompany) {
+          state.companyMetadata = selectedCompany
         }
     },
     actions: {
@@ -65,7 +71,7 @@ export default createStore({
             let response = await axios.post(`get_filing_data/`, {
               'url': lastYearFilings.url, 'keyVal': lastYearFilings.key
             });
-            console.log('response', response)
+            commit('SET_COMPANY_METADATA', response.data?.FILER)
           } catch (err) {
             console.error(err)
           }
